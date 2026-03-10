@@ -23,6 +23,17 @@ public sealed class MouseTools
         return $"Moved to {x},{y}";
     }
 
+    [McpServerTool(Name = "mouse_move_smooth"), Description("Move mouse smoothly from current position to target over a duration. Keeps menus and submenus open by following a natural path instead of teleporting.")]
+    public static string MoveSmooth(
+        [Description("Target X coordinate")] int x,
+        [Description("Target Y coordinate")] int y,
+        [Description("Duration in milliseconds (default 300, range 50-2000)")] int durationMs = 300)
+    {
+        durationMs = Math.Clamp(durationMs, 50, 2000);
+        NativeInput.MoveMouseSmooth(x, y, durationMs);
+        return $"Smooth moved to {x},{y} in {durationMs}ms";
+    }
+
     [McpServerTool(Name = "mouse_click"), Description("Click the mouse at the given screen coordinates. Automatically focuses the window at that position first.")]
     public static string Click(
         [Description("X coordinate to click")] int x,

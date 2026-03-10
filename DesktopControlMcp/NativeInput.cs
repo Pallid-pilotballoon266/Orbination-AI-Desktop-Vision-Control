@@ -103,12 +103,24 @@ internal static class NativeInput
     [DllImport("user32.dll")]
     public static extern int GetSystemMetrics(int nIndex);
 
+    [DllImport("user32.dll")]
+    public static extern uint MapVirtualKeyW(uint uCode, uint uMapType);
+
+    public const uint MAPVK_VK_TO_VSC = 0;
+
     public const int SM_CXVIRTUALSCREEN = 78;
     public const int SM_CYVIRTUALSCREEN = 79;
     public const int SM_XVIRTUALSCREEN = 76;
     public const int SM_YVIRTUALSCREEN = 77;
 
+    public const uint KEYEVENTF_SCANCODE = 0x0008;
+
     // ─── Helpers ────────────────────────────────────────────────────────────────
+
+    public static ushort GetScanCode(ushort vk)
+    {
+        return (ushort)MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
+    }
 
     public static POINT GetCursorPosition()
     {
@@ -119,6 +131,29 @@ internal static class NativeInput
     public static void MoveMouse(int x, int y)
     {
         SetCursorPos(x, y);
+    }
+
+    /// <summary>
+    /// Move the mouse smoothly from current position to target over a duration.
+    /// Uses linear interpolation with small steps to keep menus/submenus open.
+    /// </summary>
+    public static void MoveMouseSmooth(int targetX, int targetY, int durationMs = 300)
+    {
+        GetCursorPos(out var start);
+        int startX = start.X, startY = start.Y;
+
+        // At least 16ms per step (60fps-ish), minimum 5 steps
+        int steps = Math.Max(5, durationMs / 16);
+        int stepDelay = durationMs / steps;
+
+        for (int i = 1; i <= steps; i++)
+        {
+            float t = (float)i / steps;
+            int cx = startX + (int)((targetX - startX) * t);
+            int cy = startY + (int)((targetY - startY) * t);
+            SetCursorPos(cx, cy);
+            Thread.Sleep(stepDelay);
+        }
     }
 
     public static void MouseClick(string button = "left", int clicks = 1)
@@ -206,31 +241,37 @@ internal static class NativeInput
 
     public static void KeyPress(ushort vk)
     {
+        var scan = GetScanCode(vk);
         uint flags = IsExtendedKey(vk) ? KEYEVENTF_EXTENDEDKEY : 0;
+        if (scan != 0) flags |= KEYEVENTF_SCANCODE;
         var inputs = new INPUT[]
         {
-            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, dwFlags = flags } } },
-            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, dwFlags = flags | KEYEVENTF_KEYUP } } },
+            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, wScan = scan, dwFlags = flags } } },
+            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, wScan = scan, dwFlags = flags | KEYEVENTF_KEYUP } } },
         };
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
     }
 
     public static void KeyDown(ushort vk)
     {
+        var scan = GetScanCode(vk);
         uint flags = IsExtendedKey(vk) ? KEYEVENTF_EXTENDEDKEY : 0;
+        if (scan != 0) flags |= KEYEVENTF_SCANCODE;
         var inputs = new INPUT[]
         {
-            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, dwFlags = flags } } },
+            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, wScan = scan, dwFlags = flags } } },
         };
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
     }
 
     public static void KeyUp(ushort vk)
     {
+        var scan = GetScanCode(vk);
         uint flags = (IsExtendedKey(vk) ? KEYEVENTF_EXTENDEDKEY : 0u) | KEYEVENTF_KEYUP;
+        if (scan != 0) flags |= KEYEVENTF_SCANCODE;
         var inputs = new INPUT[]
         {
-            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, dwFlags = flags } } },
+            new() { Type = INPUT_KEYBOARD, U = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, wScan = scan, dwFlags = flags } } },
         };
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
     }
@@ -267,14 +308,10 @@ internal static class NativeInput
     }
 
     /// <summary>
-    /// Type text by placing it on the clipboard and pressing Ctrl+V.
-    /// More reliable than TypeUnicode for apps with custom input handling (e.g. Telegram, Electron apps).
-    /// Must run on STA thread since Clipboard requires it.
+    /// Set the system clipboard text from any thread (creates STA thread internally).
     /// </summary>
-    [System.STAThread]
-    public static void TypeViaClipboard(string text)
+    public static void SetClipboardText(string text)
     {
-        // Clipboard must be accessed from an STA thread
         var done = new System.Threading.ManualResetEventSlim(false);
         Exception? ex = null;
         var thread = new Thread(() =>
@@ -289,9 +326,16 @@ internal static class NativeInput
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         done.Wait(3000);
-
         if (ex != null) throw ex;
+    }
 
+    /// <summary>
+    /// Type text by placing it on the clipboard and pressing Ctrl+V.
+    /// More reliable than TypeUnicode for apps with custom input handling (e.g. Telegram, Electron apps).
+    /// </summary>
+    public static void TypeViaClipboard(string text)
+    {
+        SetClipboardText(text);
         Thread.Sleep(50);
         Hotkey("ctrl", "v");
         Thread.Sleep(100);

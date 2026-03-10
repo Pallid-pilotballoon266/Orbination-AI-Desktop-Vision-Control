@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows.Automation;
 using DesktopControlMcp.Native;
 using DesktopControlMcp.Services;
 using ModelContextProtocol.Server;
@@ -200,5 +202,125 @@ public sealed class CompositeTools
         seconds = Math.Min(seconds, 30);
         Thread.Sleep((int)(seconds * 1000));
         return $"Waited {seconds}s";
+    }
+
+    [McpServerTool(Name = "set_clipboard"), Description("Set the system clipboard text without pasting. Useful for preparing large text (XML, code, JSON) to paste manually or with Ctrl+V.")]
+    public static string SetClipboard(
+        [Description("Text to put on clipboard")] string text)
+    {
+        NativeInput.SetClipboardText(text);
+        return $"Clipboard set: {text.Length} chars";
+    }
+
+    [McpServerTool(Name = "paste_text"), Description("Set clipboard to the given text and paste via Ctrl+V. Reliable for large text like XML, code, or multi-line content that keyboard_type can't handle.")]
+    public static string PasteText(
+        [Description("Text to paste")] string text)
+    {
+        NativeInput.TypeViaClipboard(text);
+        return $"Pasted: {text.Length} chars";
+    }
+
+    [McpServerTool(Name = "focus_and_hotkey"), Description("Click at coordinates to ensure focus (e.g. inside an iframe), wait, then send a keyboard shortcut. Solves iframe/web app focus issues where separate click + hotkey calls fail.")]
+    public static string FocusAndHotkey(
+        [Description("X coordinate to click for focus")] int x,
+        [Description("Y coordinate to click for focus")] int y,
+        [Description("First key (e.g. ctrl, alt, shift)")] string key1,
+        [Description("Second key")] string key2 = "",
+        [Description("Optional third key")] string key3 = "",
+        [Description("Optional fourth key")] string key4 = "",
+        [Description("Delay in ms between click and hotkey (default 200, range 50-2000)")] int delayMs = 200)
+    {
+        delayMs = Math.Clamp(delayMs, 50, 2000);
+
+        // Focus the window at the click point
+        Win32.FocusWindowAt(x, y);
+        Thread.Sleep(100);
+
+        // Click to give the iframe/web content focus
+        NativeInput.MoveMouse(x, y);
+        Thread.Sleep(30);
+        NativeInput.MouseClick("left", 1);
+        Thread.Sleep(delayMs);
+
+        // Send the hotkey
+        var keys = new[] { key1, key2, key3, key4 }.Where(k => !string.IsNullOrEmpty(k)).ToArray();
+        NativeInput.Hotkey(keys);
+
+        return $"Clicked {x},{y} then pressed {string.Join("+", keys)}";
+    }
+
+    [McpServerTool(Name = "wait_for_element"), Description("Poll for a UI element to appear by text with configurable timeout. Useful after actions that trigger dialogs, menus, or page loads.")]
+    public static string WaitForElement(
+        [Description("Element text to search for")] string text,
+        [Description("Optional window filter")] string windowTitle = "",
+        [Description("Timeout in seconds (default 5, max 30)")] double timeoutSeconds = 5,
+        [Description("Poll interval in ms (default 500)")] double pollIntervalMs = 500)
+    {
+        timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 30);
+        pollIntervalMs = Math.Clamp(pollIntervalMs, 200, 2000);
+
+        var sw = Stopwatch.StartNew();
+        while (sw.Elapsed.TotalSeconds < timeoutSeconds)
+        {
+            var element = UiAutomationHelper.FindElement(text, windowTitle);
+            if (element != null)
+            {
+                var rect = element.Current.BoundingRectangle;
+                var name = element.Current.Name ?? "";
+                var ct = element.Current.ControlType.ProgrammaticName.Replace("ControlType.", "");
+                int cx = (int)(rect.X + rect.Width / 2);
+                int cy = (int)(rect.Y + rect.Height / 2);
+                return $"FOUND [{ct}] \"{name}\" @ {cx},{cy} (after {sw.Elapsed.TotalSeconds:F1}s)";
+            }
+            Thread.Sleep((int)pollIntervalMs);
+        }
+
+        return $"TIMEOUT: '{text}' not found after {timeoutSeconds}s";
+    }
+
+    [McpServerTool(Name = "click_menu_item"), Description("Navigate a menu: click parent item, smoothly move to child item, click it. Uses smooth mouse movement to keep submenus open. Single tool call for web-rendered menus.")]
+    public static string ClickMenuItem(
+        [Description("Text of parent menu to click first")] string parentText,
+        [Description("Text of child/submenu item to click")] string childText,
+        [Description("Optional window filter")] string windowTitle = "",
+        [Description("Wait ms for submenu to appear (default 600)")] int waitMs = 600)
+    {
+        waitMs = Math.Clamp(waitMs, 200, 3000);
+
+        // Step 1: Find and click parent menu
+        var parent = UiAutomationHelper.FindElement(parentText, windowTitle);
+        if (parent == null) return $"NOT FOUND: parent menu '{parentText}'";
+
+        var parentRect = parent.Current.BoundingRectangle;
+        int px = (int)(parentRect.X + parentRect.Width / 2);
+        int py = (int)(parentRect.Y + parentRect.Height / 2);
+
+        NativeInput.MoveMouse(px, py);
+        Thread.Sleep(30);
+        NativeInput.MouseClick("left", 1);
+        Thread.Sleep(waitMs);
+
+        // Step 2: Find child item
+        var child = UiAutomationHelper.FindElement(childText, windowTitle);
+        if (child == null)
+        {
+            // Retry once — web menus may take longer to render in the automation tree
+            Thread.Sleep(500);
+            child = UiAutomationHelper.FindElement(childText, windowTitle);
+        }
+
+        if (child == null)
+            return $"NOT FOUND: child item '{childText}' after clicking '{parentText}'";
+
+        // Step 3: Smooth move from parent to child (keeps submenu open)
+        var childRect = child.Current.BoundingRectangle;
+        int cx = (int)(childRect.X + childRect.Width / 2);
+        int cy = (int)(childRect.Y + childRect.Height / 2);
+
+        NativeInput.MoveMouseSmooth(cx, cy, 250);
+        Thread.Sleep(50);
+        NativeInput.MouseClick("left", 1);
+
+        return $"Clicked menu: {parentText} > {childText}";
     }
 }

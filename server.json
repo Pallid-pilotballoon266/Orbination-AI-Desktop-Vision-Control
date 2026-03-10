@@ -27,7 +27,10 @@
     "screenshot_to_file", "screenshot_region", "get_screen_info",
     "click_and_type", "navigate_to_url", "auto_scroll",
     "maximize_window", "minimize_window", "restore_window",
-    "open_app", "wait_seconds"
+    "open_app", "wait_seconds",
+    "mouse_move_smooth", "set_clipboard", "paste_text",
+    "focus_and_hotkey", "wait_for_element", "click_menu_item",
+    "ocr_screen_region", "ocr_window", "ocr_find_text"
   ],
   "remoteEndpoints": [],
   "environmentVariables": []

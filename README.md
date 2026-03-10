@@ -125,13 +125,16 @@ Or add it manually to your MCP config file:
 | `open_app` | Open an app by name (focuses existing, clicks taskbar, or searches Start) |
 | `navigate_to_url` | Navigate a browser to a URL |
 
-### Screenshots
+### Screenshots & OCR
 
 | Tool | Description |
 |---|---|
 | `screenshot_to_file` | Full screenshot across all monitors |
 | `screenshot_region` | Screenshot a specific screen region |
 | `get_screen_info` | Get monitor layout (positions, sizes, primary) |
+| `ocr_screen_region` | Capture a region and run Windows OCR — returns text with click coordinates |
+| `ocr_window` | Run OCR on an entire window — reads all visible text with positions |
+| `ocr_find_text` | Search for specific text on screen using OCR — returns click coordinates |
 
 ### Utilities
 
@@ -140,6 +143,12 @@ Or add it manually to your MCP config file:
 | `click_and_type` | Click at position then type text |
 | `auto_scroll` | Scroll with pauses between batches |
 | `wait_seconds` | Pause between actions |
+| `mouse_move_smooth` | Move mouse smoothly (keeps menus/submenus open) |
+| `set_clipboard` | Set clipboard text without pasting |
+| `paste_text` | Paste large text via clipboard (XML, code, multi-line) |
+| `focus_and_hotkey` | Click to focus (e.g. iframe) then send keyboard shortcut atomically |
+| `wait_for_element` | Poll for UI element to appear with timeout |
+| `click_menu_item` | Navigate menus: click parent, smooth-move to child, click — single call |
 
 ## Multi-Monitor Support
 
@@ -167,7 +176,24 @@ This means the AI can reliably interact with applications without pixel-perfect 
 
 ### Limitation: Custom-Rendered Apps
 
-Applications that render their own UI canvas (Flutter, Electron with custom rendering, game engines) may expose fewer or no elements to UIAutomation. For these, the server falls back to screenshot + coordinate-based interaction.
+Applications that render their own UI canvas (Flutter, Electron with custom rendering, game engines) may expose fewer or no elements to UIAutomation. For these, the server has a built-in fallback: **Windows OCR**.
+
+## Built-in OCR (Windows.Media.Ocr)
+
+When UIAutomation can't see elements (Flutter apps, game UIs, web-rendered menus inside iframes), the server uses Windows 10/11's native OCR engine to read text directly from screenshots:
+
+- **`ocr_screen_region`** — Capture any screen area and extract all visible text with click coordinates
+- **`ocr_window`** — Read all text from a window, even if it's a custom-rendered canvas
+- **`ocr_find_text`** — Search for specific text on screen and get exact coordinates to click it
+
+**Two detection strategies, one server:**
+
+| Strategy | Best for | How it works |
+|---|---|---|
+| UIAutomation | Native apps, browsers, WPF/WinForms | Reads the OS accessibility tree — instant, exact, structured |
+| Windows OCR | Flutter, Electron canvas, games, web menus | Captures pixels and recognizes text — works on anything visible |
+
+The AI automatically picks the right strategy. UIAutomation first (fast, structured), OCR as fallback (universal). Multi-language support included (en, el, de, fr, es, it, etc.).
 
 ## Token-Efficient by Design
 
