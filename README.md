@@ -8,7 +8,7 @@
 
 **Give AI assistants eyes and hands.** A native Windows MCP server that lets AI see the screen, read UI elements, click buttons, type text, and control any application.
 
-Built for [Claude Code](https://claude.ai/code) by [Orbination](https://orbination.com).
+Built for [Claude Code](https://claude.ai/code) by [Leia Enterprise Solutions](https://leia.gr) for the [Orbination](https://orbination.com) project.
 
 > AI coding assistants are blind. They generate code but can never see the result. They can't compare a design mockup to a running app. They can't click through a UI to test it. **This server fixes that.**
 
