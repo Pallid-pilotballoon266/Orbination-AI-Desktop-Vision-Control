@@ -141,6 +141,18 @@ Or add it manually to your MCP config file:
 | `auto_scroll` | Scroll with pauses between batches |
 | `wait_seconds` | Pause between actions |
 
+## Multi-Monitor Support
+
+Full multi-monitor support out of the box. The server detects all connected displays and works seamlessly across them:
+
+- **Auto-detects all monitors** — positions, sizes, primary screen via `get_screen_info`
+- **Virtual desktop mapping** — coordinates span the full virtual desktop, so the AI can click or screenshot any monitor
+- **Cross-monitor screenshots** — `screenshot_to_file` captures all screens, `screenshot_region` targets any region on any display
+- **Window-aware** — windows on any monitor are detected with correct positions, even on non-primary displays
+- **Taskbar scanning** — reads both `Shell_TrayWnd` (primary) and `Shell_SecondaryTrayWnd` (secondary monitors)
+
+No configuration needed. Plug in a second monitor and the AI sees it immediately.
+
 ## How UIAutomation Works
 
 Unlike screenshot-based tools that guess what's on screen, this server reads the actual UI element tree exposed by Windows. Every button, input field, text label, tab, and checkbox is detected with:
@@ -156,6 +168,46 @@ This means the AI can reliably interact with applications without pixel-perfect 
 ### Limitation: Custom-Rendered Apps
 
 Applications that render their own UI canvas (Flutter, Electron with custom rendering, game engines) may expose fewer or no elements to UIAutomation. For these, the server falls back to screenshot + coordinate-based interaction.
+
+## Token-Efficient by Design
+
+Every MCP tool call costs tokens. This server is engineered to minimize token usage so the AI spends less and does more:
+
+### Structured Data Instead of Screenshots
+
+Most desktop automation tools send full screenshots for every action — each one costs **thousands of tokens** for vision processing. This server returns **compact structured text** instead:
+
+```
+[button] "Save" @ 450,320
+[input] "Search..." @ 200,60
+[tab-item] "Settings" @ 120,35
+```
+
+The AI gets exact element positions and types in a few lines of text, not a 1MB image. Screenshots are available when needed but are never the default.
+
+### CacheRequest — Single Cross-Process Call
+
+The scanner uses Windows UIAutomation's `CacheRequest` pattern to batch-fetch all element properties (name, bounds, control type, automation ID, class name) in a **single cross-process call** per window. Without this, each property on each element would be a separate IPC round-trip — hundreds of calls for a single window. With caching, it's one call that returns everything.
+
+### Filtered Element Scanning
+
+Instead of crawling every node in the UI tree (thousands of elements), the scanner uses a pre-built `OrCondition` filter that only matches 14 control types the AI actually cares about: buttons, inputs, text, tabs, checkboxes, links, etc. Decorative containers, panels, and layout elements are skipped entirely — less noise, fewer tokens.
+
+### 30-Second Smart Cache
+
+Scan results are cached for 30 seconds. Multiple tool calls within that window reuse the cached data without re-scanning. Individual windows can be refreshed with `refresh_window` instead of a full `scan_desktop`, saving both time and tokens.
+
+### Compact Output Format
+
+Tool responses use minimal plain-text formatting — no JSON wrappers, no verbose metadata. Element lists show only what the AI needs: `[kind] "text" @ x,y`. Window lists show: `Title (process) [count] @ position`. Every byte of output is a token the AI has to process.
+
+### Kind Filtering & Limits
+
+`get_window_details` supports `kindFilter` (show only buttons, only inputs, etc.) and `limit` (default 30) so the AI can request exactly what it needs. A Chrome window might have 200+ elements — but if the AI only needs input fields, it gets 5 lines instead of 200.
+
+### Batch Operations
+
+`fill_form` fills multiple form fields in a single tool call instead of one call per field. `scan_desktop` returns screens + windows + elements + taskbar in one response. Fewer round-trips = fewer tokens.
 
 ## Project Structure
 
